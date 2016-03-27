@@ -1,0 +1,17 @@
+{
+  "name": "4get",
+  "version": "1.0.0",
+  "description": "4chan downloader",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ThePengwin",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^2.9.0",
+    "fs": "0.0.2",
+    "mkdirp": "^0.5.1",
+    "request": "^2.69.0"
+  }
+}
