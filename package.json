@@ -1,11 +1,12 @@
 {
   "name": "4get",
   "version": "1.0.0",
-  "description": "4chan downloader",
+  "description": "4chan thread image getter",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": "https://github.com/ThePengwin/4get",
   "author": "ThePengwin",
   "license": "MIT",
   "dependencies": {
