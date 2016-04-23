@@ -18,7 +18,7 @@ var boards = ['a','b','c','d','e','f','g','gif','h','hr','k','m','o','p','r','s'
 			  'wsr','x'];
 
 program
-	.version('1.1.1')
+	.version('1.1.2')
 	.option('-j, --json', 'Save JSON output')
 	.option('-f, --follow', 'Follow thread till 404 or error')
 	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',parseInt,10)
@@ -54,7 +54,7 @@ var savePostImage = function(post) {
 
 	var deferred = q.defer();
 
-	var remotePath = 'https://i.4cdn.org/'+board+'/'+post.tim+post.ext;
+	var remotePath = 'http://i.4cdn.org/'+board+'/'+post.tim+post.ext;
 	var localPath = folder+post.tim+post.ext;
 
 	if (fs.existsSync(localPath)) {
@@ -67,8 +67,12 @@ var savePostImage = function(post) {
 	var fileTransfer = request(remotePath).pipe(localFile);
 
 	fileTransfer.on('finish',function(){
+		fileTransfer.end();
+		localFile.end();
+		setTimeout(function(){
+			deferred.resolve();
+		},200);
 		console.log('[Image] '+remotePath+' -> '+localPath);
-		deferred.resolve();
 	});
 
 	return deferred.promise;
