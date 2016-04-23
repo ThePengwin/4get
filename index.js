@@ -18,7 +18,7 @@ var boards = ['a','b','c','d','e','f','g','gif','h','hr','k','m','o','p','r','s'
 			  'wsr','x'];
 
 program
-	.version('1.1.0')
+	.version('1.1.1')
 	.option('-j, --json', 'Save JSON output')
 	.option('-f, --follow', 'Follow thread till 404 or error')
 	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',parseInt,10)
@@ -177,7 +177,6 @@ var requestAndDownload = function(lastModified) {
 		} else if(response.statusCode == 404) {
 
 			console.log('[Request] Got response 404, Thread no longer exists');
-			process.exit(0);
 
 		} else {
 
