@@ -18,7 +18,7 @@ var boards = ['a','b','c','d','e','f','g','gif','h','hr','k','m','o','p','r','s'
 			  'wsr','x'];
 
 program
-	.version('0.0.1')
+	.version('1.1.0')
 	.option('-j, --json', 'Save JSON output')
 	.option('-f, --follow', 'Follow thread till 404 or error')
 	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',parseInt,10)

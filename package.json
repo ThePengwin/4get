@@ -1,6 +1,6 @@
 {
   "name": "4get",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "4chan thread image getter",
   "main": "index.js",
   "scripts": {
