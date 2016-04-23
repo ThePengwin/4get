@@ -3,6 +3,7 @@
 var program = require('commander');
 var request = require('request');
 var fs = require('fs');
+var q = require('q');
 var mkdirp = require('mkdirp');
 
 var threadUrl = null;
@@ -19,8 +20,8 @@ var boards = ['a','b','c','d','e','f','g','gif','h','hr','k','m','o','p','r','s'
 program
 	.version('0.0.1')
 	.option('-j, --json', 'Save JSON output')
-	//.option('-f, --follow', 'Follow thread till 404 or error')
-	//.option('-r, --refresh [time]', 'set refresh time for following in seconds. defaults to 10',10)
+	.option('-f, --follow', 'Follow thread till 404 or error')
+	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',parseInt,10)
 	.arguments('<url>')
 	.action(function (url) {
 		threadUrl = url;
@@ -47,71 +48,143 @@ if (boards.indexOf(board) == -1) {
 }
 
 var jsonURL = 'https://a.4cdn.org/'+board+'/thread/'+threadnumber+'.json';
+var folder = './'+board+'/'+threadnumber+'/';
+
+var savePostImage = function(post) {
+
+	var deferred = q.defer();
+
+	var remotePath = 'https://i.4cdn.org/'+board+'/'+post.tim+post.ext;
+	var localPath = folder+post.tim+post.ext;
+
+	if (fs.existsSync(localPath)) {
+		console.log('[Image] '+localPath+' Already Exists');
+		deferred.resolve();
+		return deferred.promise;		
+	}
+
+	var localFile = fs.createWriteStream(localPath);
+	var fileTransfer = request(remotePath).pipe(localFile);
+
+	fileTransfer.on('finish',function(){
+		console.log('[Image] '+remotePath+' -> '+localPath);
+		deferred.resolve();
+	});
+
+	return deferred.promise;
+}
+
+var imageQueue = q();
+var handledPosts = [];
+
+var saveThreadImages = function(posts) {
+	posts.forEach(function(post) {
+			imageQueue = imageQueue.then(savePostImage(post));
+	});
+};
+
+var isNew = function(post){
+	return handledPosts.indexOf(post.no) == -1;
+}
+
+var postHasImage = function(post) {
+	return (typeof post.tim != 'undefined') && (typeof post.ext != 'undefined');
+}
+
+var doneRequest = function() {
+
+}
+
+var requestAndDownload = function(lastModified) {
+
+	console.log('[Request] Getting '+jsonURL);
+
+	var requestOptions = {
+		url:jsonURL
+	}
+
+	if (typeof lastModified !== 'undefined') {
+		requestOptions.headers = {
+			'If-Modified-Since': lastModified
+		};
+	}
+
+	request(requestOptions, function (error, response, body) {
+
+		if (error) {
+
+			console.error('Failed to recieve a response: "'+error);
+			process.exit(1);
+
+		}
+
+		var newLastModified = response.headers['last-modified'];
 
 
-request(jsonURL, function (error, response, body) {
 
-	if (!error && response.statusCode == 200) {
-		var folder = './'+board+'/'+threadnumber+'/';
-		//thread is good, lets make a dir for it.
-		mkdirp(folder,function(err){
 
-			if (err) {
-				console.error('Cant create folder "'+folder+'": '+err);
-				process.exit(1);
-			}
 
-			var thread = JSON.parse(body);
 
-			if (program.json) {
-				var jsonContents = JSON.stringify(thread,null,4);
-				var jsonPath = folder+'thread.json';
-				fs.writeFile(jsonPath, jsonContents, function(err) {
-					if(err) {
-						console.error('[JSON] Failed to save JSON!');
-						process.exit(1);
-					}
-					console.log('[JSON] Saved '+jsonPath);
-				});
-			}
+		if (response.statusCode == 200) {
 
-			var savePostImage = function(post,cb) {
-				var remotePath = 'https://i.4cdn.org/'+board+'/'+post.tim+post.ext;
-				var localPath = folder+post.tim+post.ext;
+			//thread is good, lets make a dir for it.
+			mkdirp(folder,function(err){
 
-				var localFile = fs.createWriteStream(localPath);
-				var fileTransfer = request(remotePath).pipe(localFile);
+				if (err) {
+					console.error('Cant create folder "'+folder+'": '+err);
+					process.exit(1);
+				}
+		
+				var thread = JSON.parse(body);
 
-				fileTransfer.on('finish',function(){
-					console.log('[Image] '+remotePath+' -> '+localPath);
-					cb();
-				});
-				
-			}
-			var hasImage = function(post) {
-				return (typeof post.tim != 'undefined') && (typeof post.ext != 'undefined');
-			}
-
-			var imagePosts = thread.posts.filter(hasImage);
-
-			var recursiveReduceImages = function(postArray,cb) {
-				if (postArray.length < 1) {
-					cb();
-				} else {
-					var post = postArray.shift();
-					savePostImage(post,function(){
-						recursiveReduceImages(postArray,cb);
+				if (program.json) {
+					var jsonContents = JSON.stringify(thread,null,4);
+					var jsonPath = folder+'thread.json';
+					fs.writeFile(jsonPath, jsonContents, function(err) {
+						if(err) {
+							console.error('[JSON] Failed to save JSON!');
+							process.exit(1);
+						}
+						console.log('[JSON] Saved '+jsonPath);
 					});
 				}
-			};
 
-			recursiveReduceImages(imagePosts,function(){
-				console.log('[Thread] Saved all images!');
-			})
+				var imagePosts = thread.posts.filter(postHasImage);
+				var imagePosts = imagePosts.filter(isNew);
+
+				console.log('[Request] Found '+imagePosts.length+' to get.');
+
+				handledPosts = handledPosts.concat(thread.posts.map(function (post) {return post.no;}));
+				saveThreadImages(imagePosts);
+
+
+				if (program.follow) {
+					setTimeout(function() {
+						requestAndDownload(newLastModified)
+					},program.refresh*1000);
+				}
 
 			});
 
-	} else {
+		} else if(response.statusCode == 304) {
 
-	}
-});
+			console.log('[Request] Got response 304 - No New Posts');
+
+			setTimeout(function() {
+				requestAndDownload(newLastModified)
+			},program.refresh*1000);
+
+		} else if(response.statusCode == 404) {
+
+			console.log('[Request] Got response 404, Thread no longer exists');
+			process.exit(0);
+
+		} else {
+
+			console.log('[Request] Unhandled response code.');
+			process.exit(1);
+		}
+	});
+}
+
+requestAndDownload();
