@@ -54,7 +54,7 @@ var savePostImage = function(post) {
 
 	var deferred = q.defer();
 
-	var remotePath = 'http://i.4cdn.org/'+board+'/'+post.tim+post.ext;
+	var remotePath = 'https://i.4cdn.org/'+board+'/'+post.tim+post.ext;
 	var localPath = folder+post.tim+post.ext;
 
 	if (fs.existsSync(localPath)) {
