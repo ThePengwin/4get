@@ -8,17 +8,12 @@ var mkdirp = require('mkdirp');
 
 var threadUrl = null;
 
-var threadUrlRegex=/^https?\:\/\/boards\.4chan\.org\/([a-z0-9]{1,4})\/thread\/([0-9]+)\/?(.*)$/;
+var threadUrlRegex=/^https?\:\/\/boards\.4chan(nel)?\.org\/([a-z0-9]{1,4})\/thread\/([0-9]+)\/?(.*)$/;
 
-var boards = ['a','b','c','d','e','f','g','gif','h','hr','k','m','o','p','r','s',
-			  't','u','v','vg','vr','w','wg','i','ic','r9k','s4s','cm','hm',
-			  'lgbt','y','3','aco','adv','an','asp','biz','cgl','ck','co','diy',
-			  'fa','fit','gd','hc','his','int','jp','lit','mlp','mu','n','news',
-			  'out','po','pol','sci','soc','sp','tg','toy','trv','tv','vp','wsg',
-			  'wsr','x'];
+var boards = ['a', 'c', 'w', 'm', 'cgl', 'cm', 'f', 'n', 'jp', 'v', 'vg', 'vp', 'vr', 'co', 'g', 'tv', 'k', 'o', 'an', 'tg', 'sp', 'asp', 'sci', 'his', 'int', 'out', 'toy', 'i', 'po', 'p', 'ck', 'ic', 'wg', 'lit', 'mu', 'fa', '3', 'gd', 'diy', 'wsg', 'qst', 'biz', 'trv', 'fit', 'x', 'adv', 'lgbt', 'mlp', 'news', 'wsr', 'vip', 'b', 'r9k', 'pol', 'bant', 'soc', 's4s', 's', 'hc', 'hm', 'h', 'e', 'u', 'd', 'y', 't', 'hr', 'gif', 'aco', 'r'];
 
 program
-	.version('1.1.2')
+	.version('1.2')
 	.option('-j, --json', 'Save JSON output')
 	.option('-f, --follow', 'Follow thread till 404 or error')
 	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',parseInt,10)
@@ -39,8 +34,8 @@ if (!threadUrlRegex.test(threadUrl)) {
 }
 
 var threadDetails = threadUrlRegex.exec(threadUrl),
-	board = threadDetails[1],
-	threadnumber = threadDetails[2];
+	board = threadDetails[2],
+	threadnumber = threadDetails[3];
 
 if (boards.indexOf(board) == -1) {
    console.error('Invalid board specified. I don\'t think "'+board+'" is a board.');
