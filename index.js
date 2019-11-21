@@ -12,11 +12,16 @@ var threadUrlRegex=/^https?\:\/\/boards\.4chan(nel)?\.org\/([a-z0-9]{1,4})\/thre
 
 var boards = ['a', 'c', 'w', 'm', 'cgl', 'cm', 'f', 'n', 'jp', 'v', 'vg', 'vp', 'vr', 'co', 'g', 'tv', 'k', 'o', 'an', 'tg', 'sp', 'asp', 'sci', 'his', 'int', 'out', 'toy', 'i', 'po', 'p', 'ck', 'ic', 'wg', 'lit', 'mu', 'fa', '3', 'gd', 'diy', 'wsg', 'qst', 'biz', 'trv', 'fit', 'x', 'adv', 'lgbt', 'mlp', 'news', 'wsr', 'vip', 'b', 'r9k', 'pol', 'bant', 'soc', 's4s', 's', 'hc', 'hm', 'h', 'e', 'u', 'd', 'y', 't', 'hr', 'gif', 'aco', 'r'];
 
+function formatNumber(number, dummyPrevious) {
+	return parseInt(number,10);
+}
+
 program
-	.version('1.2')
+	.version('1.3.0')
 	.option('-j, --json', 'Save JSON output')
 	.option('-f, --follow', 'Follow thread till 404 or error')
-	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',parseInt,10)
+	.option('-r, --refresh <time>', 'set refresh time for following in seconds. defaults to 10',formatNumber)
+	.option('-d, --downloads <count>', 'Amount of simultaneous downloads for attachments. defaults to 4',formatNumber)
 	.arguments('<url>')
 	.action(function (url) {
 		threadUrl = url;
@@ -24,6 +29,13 @@ program
 
 program.parse(process.argv);
 
+if (program.refresh == undefined || isNaN(program.refresh) || program.refresh < 1) {
+	program.refresh = 10;
+}
+
+if (program.downloads == undefined || isNaN(program.downloads) || program.downloads < 1) {
+	program.downloads = 4;
+}
 if (threadUrl == null) {
    console.error('No thread specified. Type -h for help.');
    process.exit(1);
@@ -73,12 +85,20 @@ var savePostImage = function(post) {
 	return deferred.promise;
 }
 
-var imageQueue = q();
+var imageQueues = [];
+for (var i = 0; i < program.downloads; i++) {
+	imageQueues[i] = q();
+}
 var handledPosts = [];
 
 var saveThreadImages = function(posts) {
+	var n = 0;
 	posts.forEach(function(post) {
-			imageQueue = imageQueue.then(savePostImage(post));
+			imageQueues[n] = imageQueues[n].then(function () {return savePostImage(post)});
+			n++;
+			if (n >= program.downloads) {
+				n=0;
+			}
 	});
 };
 
@@ -118,12 +138,7 @@ var requestAndDownload = function(lastModified) {
 		}
 
 		var newLastModified = response.headers['last-modified'];
-
-
-
-
-
-
+		
 		if (response.statusCode == 200) {
 
 			//thread is good, lets make a dir for it.
